@@ -1,0 +1,10 @@
+/* Estilos adicionales y efectos tácticos HUD */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.tactical-glow {
+    box-shadow: 0 0 25px rgba(220, 38, 38, 0.4);
+}

@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Wildlife Guardian - Centro de Control Táctico</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- FontAwesome Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para estadísticas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ml5.js para reconocimiento de IA real con cámara web -->
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+</head>
+<body class="bg-black text-gray-100 dark:bg-gray-50 dark:text-gray-900 transition-colors duration-300 min-h-screen flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="border-b border-red-900/40 dark:border-red-200 bg-zinc-950 dark:bg-white sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-red-600 text-white p-2.5 rounded-lg shadow-md shadow-red-600/50">
+                    <i class="fa-solid fa-shield-cat text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-black tracking-wider uppercase text-red-600 dark:text-red-700">AI Wildlife Guardian</h1>
+                    <p class="text-[11px] text-gray-400 dark:text-gray-500">Centro de Monitoreo & Inteligencia Táctica</p>
+                </div>
+            </div>
+
+            <!-- Navegación por pestañas -->
+            <nav class="hidden md:flex space-x-1 bg-zinc-900 dark:bg-gray-200 p-1 rounded-xl border border-red-950 dark:border-gray-300 text-xs font-semibold">
+                <button onclick="switchTab('camara')" id="nav-camara" class="px-3 py-2 rounded-lg transition bg-red-600 text-white shadow">Cámara Táctica</button>
+                <button onclick="switchTab('galeria')" id="nav-galeria" class="px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white">Fotos & Sonido</button>
+                <button onclick="switchTab('checklist')" id="nav-checklist" class="px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white">Bitácora</button>
+                <button onclick="switchTab('mapa')" id="nav-mapa" class="px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white">Mapa Satelital</button>
+                <button onclick="switchTab('cazadores')" id="nav-cazadores" class="px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white">Anti-Furtivos</button>
+                <button onclick="switchTab('estadisticas')" id="nav-estadisticas" class="px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white">Estadísticas</button>
+            </nav>
+            
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleDarkMode()" class="p-2.5 rounded-lg bg-zinc-900 dark:bg-gray-200 border border-red-900/50 dark:border-gray-300 text-red-500 dark:text-red-600 hover:bg-red-950/30 transition shadow-sm" title="Cambiar modo claro/oscuro">
+                    <i id="theme-icon" class="fa-solid fa-sun text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MENÚ MÓVIL RESPONSIVE -->
+    <div class="md:hidden flex overflow-x-auto p-2 bg-zinc-900 dark:bg-gray-100 border-b border-red-950 dark:border-gray-300 gap-2 shrink-0">
+        <button onclick="switchTab('camara')" id="mnav-camara" class="px-3 py-1.5 rounded-lg text-xs bg-red-600 text-white shrink-0">Cámara</button>
+        <button onclick="switchTab('galeria')" id="mnav-galeria" class="px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0">Fotos/Sonido</button>
+        <button onclick="switchTab('checklist')" id="mnav-checklist" class="px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0">Bitácora</button>
+        <button onclick="switchTab('mapa')" id="mnav-mapa" class="px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0">Mapa</button>
+        <button onclick="switchTab('cazadores')" id="mnav-cazadores" class="px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0">Furtivos</button>
+        <button onclick="switchTab('estadisticas')" id="mnav-estadisticas" class="px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0">Estadísticas</button>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+        
+        <!-- SECCIÓN 1: CÁMARA TÁCTICA -->
+        <section id="tab-camara" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                        <h2 class="text-base font-bold flex items-center gap-2 text-red-500 dark:text-red-600">
+                            <i class="fa-solid fa-video"></i> Visor Táctico de Especies
+                        </h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <select id="camera-lens-mode" onchange="changeLensMode()" class="bg-zinc-900 dark:bg-gray-100 text-xs border border-red-950 dark:border-gray-300 rounded-lg px-3 py-1.5 text-red-400 font-semibold outline-none cursor-pointer">
+                                <option value="normal">🟢 Modo: Visión Normal</option>
+                                <option value="night">🟢 Modo: Visión Nocturna</option>
+                                <option value="thermal">🔴 Modo: Visión de Calor</option>
+                                <option value="peripheric">🔵 Modo: Visión Periférica (360°)</option>
+                            </select>
+
+                            <button onclick="toggleWebcam()" id="webcam-btn" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 font-semibold shadow-md">
+                                <i class="fa-solid fa-camera"></i> <span id="webcam-btn-text">Encender Cámara</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="camera-viewport-container" class="relative bg-black rounded-xl overflow-hidden aspect-video border border-red-950 flex items-center justify-center group shadow-inner transition-all duration-300">
+                        <video id="user-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
+                        <canvas id="snapshot-canvas" class="hidden"></canvas>
+
+                        <div id="simulated-view" class="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black flex flex-col items-center justify-center text-center p-6">
+                            <i class="fa-solid fa-crosshairs text-red-600 text-4xl mb-3 animate-bounce"></i>
+                            <p class="text-sm font-semibold text-gray-300">Lente Táctico en Espera</p>
+                            <p class="text-xs text-gray-500 mt-1 max-w-md">Enciende la cámara o prueba las simulaciones rápidas para activar el análisis de velocidad, color y comportamiento.</p>
+                        </div>
+
+                        <div id="ai-bounding-box" class="absolute border-2 border-red-600 bg-red-600/10 p-2 rounded transition-all duration-200 hidden" style="top: 20%; left: 20%; width: 60%; height: 60%;">
+                            <span id="ai-detected-label" class="absolute -top-6 left-0 bg-red-600 text-white text-[11px] px-2 py-0.5 font-bold uppercase rounded shadow">Analizando...</span>
+                        </div>
+
+                        <div class="absolute bottom-3 left-3 right-3 flex justify-between items-center text-xs text-zinc-300 bg-black/80 backdrop-blur px-3 py-2 rounded-lg border border-red-950 z-10">
+                            <span id="ai-status-text">Lente activo - Esperando movimiento...</span>
+                            <span class="text-red-400 font-mono" id="lens-indicator">NORMAL</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="text-xs text-gray-400 self-center mr-1">Simular:</span>
+                        <button onclick="simulateTacticalDetection('Jaguar')" class="px-3 py-1.5 bg-zinc-900 dark:bg-gray-100 hover:bg-red-950/40 border border-red-950 dark:border-gray-300 text-xs rounded-xl font-semibold transition">Jaguar</button>
+                        <button onclick="simulateTacticalDetection('Oso de Anteojos')" class="px-3 py-1.5 bg-zinc-900 dark:bg-gray-100 hover:bg-red-950/40 border border-red-950 dark:border-gray-300 text-xs rounded-xl font-semibold transition">Oso</button>
+                        <button onclick="simulateTacticalDetection('Cóndor Andino')" class="px-3 py-1.5 bg-zinc-900 dark:bg-gray-100 hover:bg-red-950/40 border border-red-950 dark:border-gray-300 text-xs rounded-xl font-semibold transition">Cóndor</button>
+                        <button onclick="simulateTacticalDetection('Cazador Furtivo')" class="px-3 py-1.5 bg-red-950/60 text-red-400 border border-red-800 text-xs rounded-xl font-semibold transition animate-pulse">⚠️ Furtivo</button>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-base font-bold mb-3 flex items-center gap-2 text-red-500 dark:text-red-600">
+                            <i class="fa-solid fa-fingerprint"></i> Caracterización de Movimiento
+                        </h2>
+                        
+                        <div id="characterization-card" class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950 dark:border-gray-300 space-y-3 text-xs">
+                            <div class="text-center py-6 text-gray-500">
+                                <i class="fa-solid fa-radar text-3xl mb-2 animate-spin text-red-600/50"></i>
+                                <p>Esperando captura de movimiento por la cámara...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-red-950 dark:border-gray-200">
+                        <p class="text-xs text-gray-400">📊 La IA evalúa la especie, velocidad de desplazamiento, tono de color y conducta biológica.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: FOTOS & SONIDO -->
+        <section id="tab-galeria" class="hidden space-y-6">
+            <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-red-500 dark:text-red-600">
+                        <i class="fa-solid fa-camera-retro"></i> Reconocimiento Visual - Fotografías Capturadas
+                    </h2>
+                    <span class="text-xs bg-zinc-900 dark:bg-gray-100 px-3 py-1 rounded-lg border border-red-950 text-red-500 font-bold" id="photo-count">0 Fotos</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-6">Imágenes instantáneas capturadas por la cámara al registrar movimiento.</p>
+                
+                <div id="photo-gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="col-span-full py-8 text-center text-xs text-gray-500 bg-zinc-900/50 dark:bg-gray-100 rounded-xl border border-dashed border-red-950">
+                        Aún no hay fotos capturadas.
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-red-500 dark:text-red-600">
+                        <i class="fa-solid fa-headphones"></i> Reconocimiento por Sonido (Micrófonos Forestales IA)
+                    </h2>
+                    <span class="text-xs bg-red-950/80 text-red-400 px-3 py-1 rounded-lg border border-red-800 animate-pulse">
+                        <span class="w-2 h-2 rounded-full bg-red-600 inline-block mr-1"></span> Escuchando Frecuencias
+                    </span>
+                </div>
+                <p class="text-xs text-gray-400 mb-6">Sensores acústicos instalados en los árboles detectan frecuencias de rugidos, cantos y pisadas.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-200 dark:text-gray-800">Sensor Acústico #1 (Norte)</span>
+                            <i class="fa-solid fa-volume-high text-red-500"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Frecuencia detectada: <strong>Rugido de Jaguar</strong></p>
+                        <button onclick="triggerAudioAlert('Jaguar', 'Sector Norte')" class="w-full py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-800 text-xs font-bold rounded-lg transition">Reproducir Espectrograma</button>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-200 dark:text-gray-800">Sensor Acústico #2 (Páramo)</span>
+                            <i class="fa-solid fa-volume-high text-red-500"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Frecuencia detectada: <strong>Pisada de Oso</strong></p>
+                        <button onclick="triggerAudioAlert('Oso de Anteojos', 'Páramo')" class="w-full py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-800 text-xs font-bold rounded-lg transition">Reproducir Espectrograma</button>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-gray-200 dark:text-gray-800">Sensor Acústico #3 (Sur)</span>
+                            <i class="fa-solid fa-triangle-exclamation text-red-600"></i>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Frecuencia detectada: <strong>Voces Humanas / Furtivos</strong></p>
+                        <button onclick="triggerAudioAlert('Cazador Furtivo (Sonido)', 'Sector Sur')" class="w-full py-2 bg-red-950 hover:bg-red-700 text-white border border-red-800 text-xs font-bold rounded-lg transition">⚠️ Alerta Furtiva</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: BITÁCORA -->
+        <section id="tab-checklist" class="hidden space-y-6">
+            <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold flex items-center gap-2 text-red-500 dark:text-red-600">
+                            <i class="fa-solid fa-clipboard-list"></i> Bitácora Sincronizada (Manual / Automática)
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-1">Los animales detectados por la cámara se chulean automáticamente, pero puedes marcarlos o desmarcarlos manualmente.</p>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 px-4 py-2 rounded-xl border border-red-950 dark:border-gray-300 text-xs font-semibold">
+                        Registrados: <span id="checklist-counter" class="text-red-500 font-bold">0</span> / <span id="checklist-total">12</span>
+                    </div>
+                </div>
+
+                <div id="animal-checklist-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Generado por JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: MAPA SATELITAL CON LA IMAGEN EXACTA SOLICITADA -->
+        <section id="tab-mapa" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Mapa Satelital -->
+                <div class="lg:col-span-2 bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-base font-bold flex items-center gap-2 text-red-500 dark:text-red-600">
+                            <i class="fa-solid fa-earth-americas"></i> Mapa Satelital Táctico
+                        </h2>
+                        <select id="map-filter" onchange="filterMap()" class="bg-zinc-900 dark:bg-gray-100 text-xs border border-red-950 dark:border-gray-300 rounded-lg px-3 py-1.5 text-gray-200 dark:text-gray-800 font-semibold outline-none">
+                            <option value="todos">Filtrar por: Todos los climas</option>
+                            <option value="Lluvioso">Clima Lluvioso / Húmedo</option>
+                            <option value="Seco">Clima Seco / Caluroso</option>
+                            <option value="Niebla">Clima de Niebla / Páramo</option>
+                        </select>
+                    </div>
+
+                    <!-- Contenedor con la imagen satelital exacta suministrada -->
+                    <div class="relative rounded-xl aspect-[16/9] border border-red-950 dark:border-gray-300 overflow-hidden shadow-inner flex items-center justify-center">
+                        <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://th.bing.com/th/id/R.876112e577eae730fc4ace4a0ee3974e?rik=R%2fN1wqqWLEaktg&riu=http%3a%2f%2fmapadeespana.org%2fwp-content%2fuploads%2fmapa-satelital-de-espana.jpg&ehk=41%2fC1v0hEU4LA93V1YsMO5t6lxsJE6JsD9jVCvd0ObA%3d&risl=&pid=ImgRaw&r=0'); filter: brightness(0.9) contrast(1.1);"></div>
+                        <div class="absolute inset-0 bg-black/10"></div>
+
+                        <!-- Etiqueta HUD superior izquierda -->
+                        <div class="absolute top-3 left-3 bg-zinc-950/90 text-gray-200 text-[11px] font-mono px-3 py-1.5 rounded-lg border border-red-900/60 shadow-xl z-20 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span> SAT-VIEW: RESERVA CENTRAL (GPS ACTIVO)
+                        </div>
+
+                        <!-- Pines circulares rojos con iconos blancos -->
+                        <div id="map-pins-container" class="absolute inset-0 z-10">
+                            <!-- Generado por JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frecuencia por Clima -->
+                <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-base font-bold mb-3 flex items-center gap-2 text-red-500 dark:text-red-600">
+                            <i class="fa-solid fa-chart-line"></i> Frecuencia por Clima
+                        </h2>
+                        <p class="text-xs text-gray-400 mb-4">Análisis de IA sobre dónde y cuándo es más frecuente el paso de animales:</p>
+                        
+                        <div class="space-y-3">
+                            <div class="bg-zinc-900 dark:bg-gray-100 p-3 rounded-xl border border-red-950">
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span>🌧️ Clima Lluvioso</span>
+                                    <span class="text-red-500">68% Avistamientos (Felinos)</span>
+                                </div>
+                                <div class="w-full bg-zinc-800 dark:bg-gray-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-red-600 h-full w-[68%]"></div>
+                                </div>
+                            </div>
+                            <div class="bg-zinc-900 dark:bg-gray-100 p-3 rounded-xl border border-red-950">
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span>☀️ Clima Seco</span>
+                                    <span class="text-red-500">45% (Cérvidos / Fuentes de agua)</span>
+                                </div>
+                                <div class="w-full bg-zinc-800 dark:bg-gray-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-red-600 h-full w-[45%]"></div>
+                                </div>
+                            </div>
+                            <div class="bg-zinc-900 dark:bg-gray-100 p-3 rounded-xl border border-red-950">
+                                <div class="flex justify-between text-xs font-bold mb-1">
+                                    <span>🌫️ Clima de Niebla</span>
+                                    <span class="text-red-500">82% (Osos y Aves Altoandinas)</span>
+                                </div>
+                                <div class="w-full bg-zinc-800 dark:bg-gray-200 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-red-600 h-full w-[82%]"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 5: ANTI-CAZADORES FURTIVOS -->
+        <section id="tab-cazadores" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl lg:col-span-1">
+                    <h2 class="text-base font-bold mb-4 flex items-center gap-2 text-red-500 dark:text-red-600">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Zona de Riesgo y Furtivos
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-red-950/40 border border-red-800 rounded-xl">
+                            <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 font-bold uppercase rounded">Alerta Activa</span>
+                            <h3 class="text-sm font-bold text-red-400 mt-2">Intrusos detectados en Sector Sur</h3>
+                            <p class="text-xs text-gray-300 mt-1">Sensores acústicos y térmicos detectaron voces y fogata no autorizada.</p>
+                            <span class="text-[10px] text-gray-400 block mt-2">Coordenadas: 3.2109° N, 76.8123° W</span>
+                        </div>
+                        <button onclick="dispatchRanger()" class="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-red-600/30">
+                            🚨 Despachar Guardia Forestal
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-5 shadow-xl lg:col-span-2">
+                    <h2 class="text-base font-bold mb-4 flex items-center gap-2 text-red-500 dark:text-red-600">
+                        <i class="fa-solid fa-chart-bar"></i> Estadísticas de Furtivismo (Especies & Motivos)
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                        <div>
+                            <canvas id="poachingChart" height="200"></canvas>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <h3 class="font-bold text-red-400 uppercase tracking-wider">Principales Motivos de Caza Ilegal:</h3>
+                            <div class="p-3 bg-zinc-900 dark:bg-gray-100 rounded-xl border border-red-950">
+                                <p class="font-bold text-gray-200 dark:text-gray-800">1. Tráfico y Moda (Pieles / Mascotas)</p>
+                                <p class="text-gray-400 text-[11px] mt-0.5">Afecta principalmente a felinos (Jaguares) y aves exóticas.</p>
+                            </div>
+                            <div class="p-3 bg-zinc-900 dark:bg-gray-100 rounded-xl border border-red-950">
+                                <p class="font-bold text-gray-200 dark:text-gray-800">2. Deporte / Trofeos</p>
+                                <p class="text-gray-400 text-[11px] mt-0.5">Caza furtiva recreativa en periferias de la reserva.</p>
+                            </div>
+                            <div class="p-3 bg-zinc-900 dark:bg-gray-100 rounded-xl border border-red-950">
+                                <p class="font-bold text-gray-200 dark:text-gray-800">3. Subsistencia y Conflictos</p>
+                                <p class="text-gray-400 text-[11px] mt-0.5">Caza por represalia al ganado local (osos y pumas).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 6: ESTADÍSTICAS GLOBALES -->
+        <section id="tab-estadisticas" class="hidden space-y-6">
+            <div class="bg-zinc-950 dark:bg-white border border-red-900/40 dark:border-gray-300 rounded-2xl p-6 shadow-xl">
+                <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-red-500 dark:text-red-600">
+                    <i class="fa-solid fa-chart-pie"></i> Panel de Estadísticas Generales del Ecosistema
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <p class="text-xs text-gray-400">Total Especies Monitoreadas</p>
+                        <p class="text-3xl font-black text-red-500 mt-1">1,420</p>
+                        <span class="text-[10px] text-green-500 mt-1 block">↑ 14% respecto al mes anterior</span>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <p class="text-xs text-gray-400">Cámaras Activas en Red</p>
+                        <p class="text-3xl font-black text-red-500 mt-1">48 / 48</p>
+                        <span class="text-[10px] text-green-500 mt-1 block">100% Operativas</span>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <p class="text-xs text-gray-400">Incidentes Furtivos Neutralizados</p>
+                        <p class="text-3xl font-black text-red-600 mt-1">9</p>
+                        <span class="text-[10px] text-gray-400 mt-1 block">Intervención oportuna</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <h3 class="text-sm font-bold mb-3 text-gray-200 dark:text-gray-800">Distribución de Población Animal</h3>
+                        <canvas id="speciesBarChart" height="150"></canvas>
+                    </div>
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border border-red-950">
+                        <h3 class="text-sm font-bold mb-3 text-gray-200 dark:text-gray-800">Avistamientos por Horario (Patrón IA)</h3>
+                        <canvas id="timeLineChart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-red-900/40 dark:border-red-200 bg-zinc-950 dark:bg-white py-4 text-center text-xs text-gray-500">
+        AI Wildlife Guardian &copy; 2026 - Inteligencia artificial aplicada a la conservación ambiental.
+    </footer>
+
+    <!-- SCRIPT DE LÓGICA -->
+    <script>
+        const animalsList = [
+            { id: 1, name: "Jaguar", category: "Felinos", icon: "fa-shield-cat", visto: true, clima: "Lluvioso" },
+            { id: 2, name: "Oso de Anteojos", category: "Mamíferos", icon: "fa-paw", visto: true, clima: "Niebla" },
+            { id: 3, name: "Cóndor Andino", category: "Aves", icon: "fa-feather", visto: false, clima: "Niebla" },
+            { id: 4, name: "Venado de Cola Blanca", category: "Cérvidos", icon: "fa-mound", visto: true, clima: "Seco" },
+            { id: 5, name: "Puma Concolor", category: "Felinos", icon: "fa-cat", visto: false, clima: "Seco" },
+            { id: 6, name: "Danta de Montaña", category: "Mamíferos", icon: "fa-hippo", visto: false, clima: "Lluvioso" },
+            { id: 7, name: "Águila Crestada", category: "Aves", icon: "fa-kiwi-bird", visto: true, clima: "Lluvioso" },
+            { id: 8, name: "Zorro Culpeo", category: "Cánidos", icon: "fa-dog", visto: false, clima: "Seco" },
+            { id: 9, name: "Rana de Cristal", category: "Anfibios", icon: "fa-frog", visto: true, clima: "Lluvioso" },
+            { id: 10, name: "Mono Tocón", category: "Primates", icon: "fa-monkey", visto: false, clima: "Lluvioso" },
+            { id: 11, name: "Guacamaya Roja", category: "Aves", icon: "fa-dove", visto: true, clima: "Seco" },
+            { id: 12, name: "Pecarí de Collar", category: "Mamíferos", icon: "fa-piggy-bank", visto: false, clima: "Seco" }
+        ];
+
+        let capturedPhotos = [];
+
+        const characterizationData = {
+            "Jaguar": { speed: "4.2 km/h (Acecho)", color: "Amarillo ocre con manchas rosetas negras", desc: "El ejemplar se desplaza sigilosamente cerca de la ribera fluvial, marcando territorio y evaluando posibles presas en la zona húmeda." },
+            "Oso de Anteojos": { speed: "2.1 km/h (Tránsito lento)", color: "Negro denso con marcas beige faciales", desc: "Se alimenta pacíficamente de bromelias en la zona alta de páramo, manteniendo una conducta tranquila y de exploración." },
+            "Cóndor Andino": { speed: "35.0 km/h (Planeo aéreo)", color: "Negro intenso con collar blanco y cabeza roja", desc: "Planea con corrientes térmicas ascendentes buscando carroña o supervisando su territorio desde la cumbre." },
+            "Venado de Cola Blanca": { speed: "6.8 km/h (Trote rápido)", color: "Pardo rojizo con vientre y cola blancos", desc: "Se desplaza en alerta debido a corrientes de viento, buscando fuentes de agua fresca en el sector de valle seco." },
+            "Puma Concolor": { speed: "5.5 km/h (Trote sigiloso)", color: "Marrón leonado uniforme", desc: "Recorre su ruta habitual de patrullaje nocturno, evitando áreas con actividad humana reciente." },
+            "Cazador Furtivo": { speed: "3.8 km/h (Marcha humana)", color: "Ropa táctica oscura / camuflaje", desc: "Intruso detectado portando equipo no autorizado; se desplaza en dirección sur hacia el límite de la reserva." }
+        };
+
+        function mapToWildlife(aiLabel) {
+            const text = aiLabel.toLowerCase();
+            if (text.includes('jaguar') || text.includes('leopard') || text.includes('cheetah') || text.includes('panther')) return 'Jaguar';
+            if (text.includes('bear') || text.includes('panda')) return 'Oso de Anteojos';
+            if (text.includes('condor') || text.includes('vulture') || text.includes('eagle') || text.includes('bird')) return 'Cóndor Andino';
+            if (text.includes('deer') || text.includes('elk')) return 'Venado de Cola Blanca';
+            if (text.includes('cat') || text.includes('cougar')) return 'Puma Concolor';
+            if (text.includes('person') || text.includes('man') || text.includes('human') || text.includes('jacket')) return 'Cazador Furtivo';
+            return 'Jaguar';
+        }
+
+        function switchTab(tabId) {
+            const tabs = ['camara', 'galeria', 'checklist', 'mapa', 'cazadores', 'estadisticas'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`nav-${t}`);
+                const mbtn = document.getElementById(`mnav-${t}`);
+                if(btn) btn.className = "px-3 py-2 rounded-lg transition text-gray-300 dark:text-gray-700 hover:text-white";
+                if(mbtn) mbtn.className = "px-3 py-1.5 rounded-lg text-xs text-gray-300 dark:text-gray-700 shrink-0";
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            const activeMBtn = document.getElementById(`mnav-${tabId}`);
+            if(activeBtn) activeBtn.className = "px-3 py-2 rounded-lg transition bg-red-600 text-white shadow";
+            if(activeMBtn) activeMBtn.className = "px-3 py-1.5 rounded-lg text-xs bg-red-600 text-white shrink-0";
+            
+            if(tabId === 'checklist') renderChecklist();
+            if(tabId === 'mapa') renderMapPins();
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if(html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = "fa-solid fa-moon text-lg";
+            } else {
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-sun text-lg";
+            }
+        }
+
+        function changeLensMode() {
+            const mode = document.getElementById('camera-lens-mode').value;
+            const container = document.getElementById('camera-viewport-container');
+            const indicator = document.getElementById('lens-indicator');
+            
+            container.style.filter = '';
+            container.style.transform = '';
+
+            if (mode === 'normal') {
+                indicator.innerText = "NORMAL";
+            } else if (mode === 'night') {
+                container.style.filter = 'sepia(100%) hue-rotate(90deg) saturate(300%) contrast(150%)';
+                indicator.innerText = "VISIÓN NOCTURNA TÁCTICA";
+            } else if (mode === 'thermal') {
+                container.style.filter = 'invert(100%) hue-rotate(180deg) saturate(400%) contrast(200%)';
+                indicator.innerText = "VISIÓN TÉRMICA DE CALOR";
+            } else if (mode === 'peripheric') {
+                container.style.transform = 'scale(0.85)';
+                container.style.borderRadius = '50px';
+                indicator.innerText = "VISIÓN PERIFÉRICA 360°";
+            }
+        }
+
+        function renderChecklist() {
+            const grid = document.getElementById('animal-checklist-grid');
+            grid.innerHTML = '';
+            let vistosCount = 0;
+
+            animalsList.forEach(animal => {
+                if(animal.visto) vistosCount++;
+                grid.innerHTML += `
+                    <div class="bg-zinc-900 dark:bg-gray-100 p-4 rounded-xl border ${animal.visto ? 'border-red-600/60 shadow-lg shadow-red-950/20' : 'border-red-950 dark:border-gray-300'} flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2.5 rounded-lg bg-zinc-950 dark:bg-white text-red-500 shadow">
+                                <i class="fa-solid ${animal.icon}"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-200 dark:text-gray-800">${animal.name}</h4>
+                                <span class="text-[10px] text-gray-400">${animal.category} • ${animal.clima}</span>
+                            </div>
+                        </div>
+                        <input type="checkbox" ${animal.visto ? 'checked' : ''} onchange="toggleAnimalVisto(${animal.id})" class="w-5 h-5 accent-red-600 cursor-pointer">
+                    </div>
+                `;
+            });
+
+            document.getElementById('checklist-counter').innerText = vistosCount;
+            document.getElementById('checklist-total').innerText = animalsList.length;
+        }
+
+        function toggleAnimalVisto(id) {
+            const animal = animalsList.find(a => a.id === id);
+            if(animal) {
+                animal.visto = !animal.visto;
+                renderChecklist();
+            }
+        }
+
+        let classifier;
+        let webcamStream = null;
+        let isCamActive = false;
+        const videoElement = document.getElementById('user-video');
+        const canvasElement = document.getElementById('snapshot-canvas');
+
+        async function toggleWebcam() {
+            const simView = document.getElementById('simulated-view');
+            const btnText = document.getElementById('webcam-btn-text');
+
+            if (!isCamActive) {
+                try {
+                    classifier = await ml5.imageClassifier('MobileNet', () => {});
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                    videoElement.srcObject = webcamStream;
+                    videoElement.classList.remove('hidden');
+                    simView.classList.add('hidden');
+                    document.getElementById('ai-bounding-box').classList.remove('hidden');
+                    btnText.innerText = "Apagar Cámara";
+                    isCamActive = true;
+                    tacticalClassifyVideo();
+                } catch (e) {
+                    alert("No se pudo encender la cámara web.");
+                }
+            } else {
+                if (webcamStream) webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+                videoElement.classList.add('hidden');
+                simView.classList.remove('hidden');
+                document.getElementById('ai-bounding-box').classList.add('hidden');
+                btnText.innerText = "Encender Cámara";
+                isCamActive = false;
+            }
+        }
+
+        function tacticalClassifyVideo() {
+            if (!isCamActive || !classifier) return;
+            classifier.classify(videoElement, (err, results) => {
+                if (!err && results && results.length > 0) {
+                    const mapped = mapToWildlife(results[0].label);
+                    const conf = (results[0].confidence * 100).toFixed(1);
+                    if (conf > 35) processDetectionResult(mapped, conf);
+                }
+                if (isCamActive) setTimeout(tacticalClassifyVideo, 1000);
+            });
+        }
+
+        function simulateTacticalDetection(species) {
+            processDetectionResult(species, '99.2');
+        }
+
+        function processDetectionResult(species, confidence) {
+            document.getElementById('ai-detected-label').innerText = `${species.toUpperCase()} (${confidence}%)`;
+            document.getElementById('ai-status-text').innerText = `Actividad detectada: ${species}`;
+            document.getElementById('ai-bounding-box').classList.remove('hidden');
+
+            const char = characterizationData[species] || { speed: "3.0 km/h", color: "Pardo natural", desc: "Movimiento registrado en la zona." };
+            document.getElementById('characterization-card').innerHTML = `
+                <div class="flex items-center justify-between border-b border-red-950 pb-2">
+                    <span class="font-bold text-red-500 text-sm"><i class="fa-solid fa-paw mr-1"></i> ${species}</span>
+                    <span class="text-[10px] bg-red-950 text-red-300 px-2 py-0.5 rounded">${confidence}% Confiabilidad</span>
+                </div>
+                <div class="space-y-1.5 pt-1">
+                    <p><strong>⚡ Velocidad estimada:</strong> ${char.speed}</p>
+                    <p><strong>🎨 Característica de Color:</strong> ${char.color}</p>
+                    <p><strong>📝 Conducta observada:</strong> ${char.desc}</p>
+                </div>
+            `;
+
+            let imgSrc = "https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?w=500&auto=format&fit=crop&q=60";
+            if (isCamActive) {
+                canvasElement.width = videoElement.videoWidth || 640;
+                canvasElement.height = videoElement.videoHeight || 480;
+                const ctx = canvasElement.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                imgSrc = canvasElement.toDataURL('image/png');
+            }
+
+            const timeStr = new Date().toLocaleTimeString();
+            capturedPhotos.unshift({ species, confidence, time: timeStr, image: imgSrc, type: 'Táctico' });
+            renderPhotoGallery();
+
+            const found = animalsList.find(a => a.name.toLowerCase() === species.toLowerCase());
+            if (found && !found.visto) found.visto = true;
+        }
+
+        function renderPhotoGallery() {
+            const galleryGrid = document.getElementById('photo-gallery-grid');
+            document.getElementById('photo-count').innerText = `${capturedPhotos.length} Fotos`;
+            if (capturedPhotos.length === 0) return;
+
+            galleryGrid.innerHTML = '';
+            capturedPhotos.forEach(photo => {
+                galleryGrid.innerHTML += `
+                    <div class="bg-zinc-900 dark:bg-gray-100 rounded-xl overflow-hidden border border-red-950 dark:border-gray-300 shadow-lg flex flex-col">
+                        <div class="relative aspect-video bg-black overflow-hidden">
+                            <img src="${photo.image}" class="w-full h-full object-cover">
+                            <span class="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-0.5 font-bold uppercase rounded">${photo.species}</span>
+                            <span class="absolute bottom-2 right-2 bg-black/80 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">${photo.confidence}%</span>
+                        </div>
+                        <div class="p-3 flex justify-between items-center text-xs">
+                            <span class="text-gray-400 font-mono">${photo.time}</span>
+                            <span class="text-red-500 font-semibold">${photo.type}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function triggerAudioAlert(species, sector) {
+            const timeStr = new Date().toLocaleTimeString();
+            alert(`🎧 [MONITOREO DE SONIDO] Frecuencia acústica analizada en el ${sector}. Patrón identificado: ${species}.`);
+            capturedPhotos.unshift({ species: `${species} (Sonido)`, confidence: '94.2', time: timeStr, image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60', type: 'Acústico' });
+            renderPhotoGallery();
+        }
+
+        // Pines circulares rojos con iconos blancos
+        function renderMapPins(filter = 'todos') {
+            const container = document.getElementById('map-pins-container');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            const pins = [
+                { name: "Jaguar", top: "35%", left: "42%", clima: "Lluvioso", icon: "fa-shield-cat" },
+                { name: "Oso de Anteojos", top: "60%", left: "65%", clima: "Niebla", icon: "fa-paw" },
+                { name: "Venado de Cola Blanca", top: "50%", left: "28%", clima: "Seco", icon: "fa-mound" },
+                { name: "Guacamaya Roja", top: "25%", left: "80%", clima: "Seco", icon: "fa-dove" },
+                { name: "Cazador Furtivo (Alerta)", top: "75%", left: "48%", clima: "Lluvioso", icon: "fa-triangle-exclamation" }
+            ];
+
+            pins.forEach(pin => {
+                if(filter === 'todos' || pin.clima === filter) {
+                    container.innerHTML += `
+                        <div class="absolute group cursor-pointer -translate-x-1/2 -translate-y-1/2" style="top: ${pin.top}; left: ${pin.left};">
+                            <div class="bg-red-600 text-white p-3 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.9)] flex items-center justify-center w-11 h-11 border-2 border-white animate-bounce">
+                                <i class="fa-solid ${pin.icon} text-sm"></i>
+                            </div>
+                            <div class="absolute bottom-14 left-1/2 -translate-x-1/2 bg-black/95 text-white text-[11px] px-3.5 py-1.5 rounded-xl shadow-2xl border border-red-900 opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-30 font-bold">
+                                Especie: ${pin.name} (${pin.clima})
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function filterMap() {
+            const val = document.getElementById('map-filter').value;
+            renderMapPins(val);
+        }
+
+        function dispatchRanger() {
+            alert("🚨 ¡Alerta enviada! Equipo táctico y guardabosques en camino a las coordenadas del intruso furtivo.");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderChecklist();
+            renderMapPins();
+
+            const ctxPoach = document.getElementById('poachingChart').getContext('2d');
+            new Chart(ctxPoach, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tráfico y Moda', 'Deporte / Trofeo', 'Subsistencia / Represalia'],
+                    datasets: [{
+                        data: [55, 25, 20],
+                        backgroundColor: ['#dc2626', '#b91c1c', '#7f1d1d'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } } }
+            });
+
+            const ctxSpecies = document.getElementById('speciesBarChart').getContext('2d');
+            new Chart(ctxSpecies, {
+                type: 'bar',
+                data: {
+                    labels: ['Felinos', 'Mamíferos', 'Aves', 'Cérvidos', 'Anfibios'],
+                    datasets: [{
+                        label: 'Individuos Registrados',
+                        data: [120, 430, 610, 180, 80],
+                        backgroundColor: '#dc2626',
+                        borderRadius: 6
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } }
+            });
+
+            const ctxTime = document.getElementById('timeLineChart').getContext('2d');
+            new Chart(ctxTime, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                    datasets: [{
+                        label: 'Avistamientos',
+                        data: [12, 28, 45, 20, 35, 50],
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } }
+            });
+        });
+    </script>
+</body>
+</html>
